@@ -9,6 +9,6 @@ A simple github action that combines multiple prs into one
 
 ## how to use
 
-- create [combine-prs.yaml](./github/workflows/combine-prs.yaml) and place in your workflows.
+- create [combine-prs.yaml](./.github/workflows/combine-prs.yaml) and place in your workflows.
 - run manually from the action tab to combine prs
 
