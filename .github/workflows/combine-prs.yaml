@@ -1,10 +1,12 @@
 name: ci-combineprs
 
+run-name: combine-prs [ ${{ inputs.branchPrefix }} ]
+
 on:
   workflow_dispatch:
     inputs:
       branchPrefix:
-        description: 'Branch prefix to find combinable PRs based on (ie, dependabot/)'
+        description: 'Branch prefix to find combinable PRs based on (ie, dependabot/ compose/ feat/ fix/ other)'
         required: true
         type: string
         default: 'dependabot/'
@@ -27,13 +29,16 @@ jobs:
   combine-prs:
 
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/github-script@v6 # v7 needs testing
         id: fetch-branch-names
         name: fetch-branch-names
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pulls = await github.paginate('GET /repos/:owner/:repo/pulls', {
               owner: context.repo.owner,
@@ -95,8 +100,9 @@ jobs:
             console.log('Combined: ' + combined);
             return combined
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
+          ref: ${{ steps.fetch-branch-names.outputs.base-branch }}
           fetch-depth: 0
 
       - name: create-combined-branch
@@ -105,20 +111,25 @@ jobs:
           BRANCHES_TO_COMBINE: ${{ steps.fetch-branch-names.outputs.result }}
           COMBINE_BRANCH_NAME: ${{ github.event.inputs.combineBranchName }}
         run: |
-          echo "$BRANCHES_TO_COMBINE"
+          echo "Branches to combine: $BRANCHES_TO_COMBINE"
+
           sourcebranches="${BRANCHES_TO_COMBINE%\"}"
           sourcebranches="${sourcebranches#\"}"
           
           basebranch="${BASE_BRANCH%\"}"
           basebranch="${basebranch#\"}"
-          
+
           git config pull.rebase false
           git config user.name github-actions
           git config user.email github-actions@github.com
-          
+
           git branch $COMBINE_BRANCH_NAME $basebranch
           git checkout $COMBINE_BRANCH_NAME
+
+          # merge all branches into the new branch
           git pull origin $sourcebranches --no-edit
+
+          # push the new branch to the remote
           git push origin $COMBINE_BRANCH_NAME
 
       - uses: actions/github-script@v4 # v5-v6 have pulls.create problems that I couldn't resolve, have not tested v7 yet
@@ -126,7 +137,7 @@ jobs:
         env:
           PRS_STRING: ${{ steps.fetch-branch-names.outputs.prs-string }}
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prString = process.env.PRS_STRING;
             const body = 'This PR was created by the Combine PRs action by combining the following PRs:\n' + prString;
