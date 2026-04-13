@@ -34,7 +34,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/github-script@v6 # v7 needs testing
+      - uses: actions/github-script@v9 # v7 needs testing
         id: fetch-branch-names
         name: fetch-branch-names
         with:
@@ -132,7 +132,7 @@ jobs:
           # push the new branch to the remote
           git push origin $COMBINE_BRANCH_NAME
 
-      - uses: actions/github-script@v4 # v5-v6 have pulls.create problems that I couldn't resolve, have not tested v7 yet
+      - uses: actions/github-script@v9 # v5-v6 have pulls.create problems that I couldn't resolve, have not tested v7 yet
         name: create-combined-pr
         env:
           PRS_STRING: ${{ steps.fetch-branch-names.outputs.prs-string }}
